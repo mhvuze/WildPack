@@ -15,6 +15,10 @@ namespace WildPack
         {
             Console.WriteLine("Decoding {0}", infile);
             Yaz0Compression.Decompress(infile, outfile);
+            byte[] yaz0_data = File.ReadAllBytes(infile);
+            byte[] padding = new byte[] { yaz0_data[8], yaz0_data[9], yaz0_data[10], yaz0_data[11], yaz0_data[12], yaz0_data[13], yaz0_data[14], yaz0_data[15], yaz0_data[16] };
+            ulong padding_int = BitConverter.ToUInt64(padding, 0);
+            if (padding_int > 0) { Console.WriteLine("Important: Padding for this file is 0x{0}. Keep in mind when repacking.", padding_int.ToString("X16")); }
         }
 
         // Encode yaz0 file
