@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace WildPack
 {
@@ -171,6 +172,12 @@ namespace WildPack
                 string realname = indir_files[c];
                 string filenameD = indir_files[c].Replace(indir + Path.DirectorySeparatorChar.ToString(), "");
                 string filename = filenameD.Replace("\\", "/");
+
+                // Account for file names in root
+                if (filename.Count(f => f == '/') == 0)
+                {
+                    filename = "/" + filename;
+                }
 
                 filesize = Utils.getfilesize(realname);
                 if (filesize % padding > 0) filesize += (padding - (filesize % padding));
