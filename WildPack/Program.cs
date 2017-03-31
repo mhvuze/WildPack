@@ -62,7 +62,7 @@ namespace WildPack
                             case "e":
                                 if (File.Exists(args[2]))
                                 {
-                                    YAZ0.EncodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_enc." + Path.GetExtension(args[2]));
+                                    YAZ0.EncodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_enc" + Path.GetExtension(args[2]));
                                 }
                                 else
                                 {

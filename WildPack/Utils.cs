@@ -63,5 +63,16 @@ namespace WildPack
             }
             return (uint)(result & 0xFFFFFFFF);
         }
+
+        public static byte[] ArrayReverse(byte[] array)
+        {
+            Array.Reverse(array);
+            return array;
+        }
+
+        public static Int32 SwapEndianness(Int32 value)
+        {
+            return BitConverter.ToInt32(ArrayReverse(BitConverter.GetBytes(value)), 0);
+        }
     }
 }
