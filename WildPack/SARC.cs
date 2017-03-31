@@ -154,7 +154,7 @@ namespace WildPack
         }
 
         // Pack sarc
-        public static void PackSARC(string indir, string outfile)
+        public static void PackSARC(string indir, string outfile, uint sfnt_padding)
         {
             StreamWriter sw = new StreamWriter(outfile);
             uint padding = 4;
@@ -174,7 +174,7 @@ namespace WildPack
                 string filename = filenameD.Replace("\\", "/");
 
                 // Account for file names in root
-                if (filename.Count(f => f == '/') == 0)
+                if (filename.Count(f => f == '/') == 0 && sfnt_padding == 0)
                 {
                     filename = "/" + filename;
                 }
@@ -219,8 +219,9 @@ namespace WildPack
             //uint lastfile = Utils.getfilesize(filedatalist[hashes[hashes.Length - 1].index].realname);
             //lenfiles += (int)lastfile;
             filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
-            //uint padSFAT = (padding - (filesize % padding));
             uint padSFAT = 0;
+            if (sfnt_padding > 0)
+                padSFAT = (sfnt_padding - (filesize % sfnt_padding));          
             uint datastart = padSFAT + filesize;
             filesize += (uint)(padSFAT + lenfiles);
 

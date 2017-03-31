@@ -14,7 +14,7 @@ namespace WildPack
             string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
             Console.WriteLine("WildPack v{0} by MHVuze", version);
 
-            if (args.Count() == 3)
+            if (args.Count() >= 3 )
             {
                 switch(args[0])
                 {
@@ -35,7 +35,9 @@ namespace WildPack
                             case "p":
                                 if (Directory.Exists(args[2]))
                                 {
-                                    SARC.PackSARC(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileName(args[2]) + "_new.sarc");
+                                    uint padding = 0;
+                                    if (args.Count() == 4) { padding = Convert.ToUInt32(args[3], 16); }
+                                    SARC.PackSARC(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileName(args[2]) + "_new.sarc", padding);
                                 }
                                 else
                                 {
@@ -62,7 +64,9 @@ namespace WildPack
                             case "e":
                                 if (File.Exists(args[2]))
                                 {
-                                    YAZ0.EncodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_enc" + Path.GetExtension(args[2]));
+                                    int padding = 0;
+                                    if (args.Count() == 4) { padding = Convert.ToInt32(args[3], 16); }
+                                    YAZ0.EncodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_enc" + Path.GetExtension(args[2]), padding);
                                 }
                                 else
                                 {

@@ -16,13 +16,13 @@ namespace WildPack
             Console.WriteLine("Decoding {0}", infile);
             Yaz0Compression.Decompress(infile, outfile);
             byte[] yaz0_data = File.ReadAllBytes(infile);
-            byte[] padding = new byte[] { yaz0_data[8], yaz0_data[9], yaz0_data[10], yaz0_data[11], yaz0_data[12], yaz0_data[13], yaz0_data[14], yaz0_data[15], yaz0_data[16] };
-            ulong padding_int = BitConverter.ToUInt64(padding, 0);
-            if (padding_int > 0) { Console.WriteLine("Important: Padding for this file is 0x{0}. Keep in mind when repacking.", padding_int.ToString("X16")); }
+            byte[] padding = new byte[] { yaz0_data[8], yaz0_data[9], yaz0_data[10], yaz0_data[11] };
+            int padding_int = Utils.SwapEndianness(BitConverter.ToInt32(padding, 0));
+            if (padding_int > 0) { Console.WriteLine("Important: Padding for this file is 0x{0}. Keep in mind when repacking.", padding_int.ToString("X8")); }
         }
 
         // Encode yaz0 file
-        public static void EncodeYAZ0(string infile, string outfile)
+        public static void EncodeYAZ0(string infile, string outfile, int padding)
         {
             Byte codeByte = 0x00;
             byte[] decodedBuffer = File.ReadAllBytes(infile);
@@ -34,7 +34,7 @@ namespace WildPack
             {
                 fs.Write(Encoding.UTF8.GetBytes("Yaz0"), 0, 4);
                 fs.Write(BitConverter.GetBytes(Utils.SwapEndianness((Int32)infile.Length)), 0, 4);
-                fs.Write(BitConverter.GetBytes(Utils.SwapEndianness(0x00000000)), 0, 4); //Can be 0x00002000 sometimes, check the original Yaz0 file at offset 0x08
+                fs.Write(BitConverter.GetBytes(Utils.SwapEndianness(padding)), 0, 4);
                 fs.Write(BitConverter.GetBytes(Utils.SwapEndianness(0x00000000)), 0, 4);
 
                 for (int i = 0; i < bulkChunksCount; i++)
