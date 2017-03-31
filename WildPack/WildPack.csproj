@@ -33,6 +33,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Syroot.IO.BinaryData, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Syroot.IO.BinaryData.1.0.3\lib\net45\Syroot.IO.BinaryData.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Syroot.NintenTools.Yaz0, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Syroot.NintenTools.Yaz0.2.0.0\lib\net45\Syroot.NintenTools.Yaz0.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -47,9 +55,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SARC.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="YAZ0.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

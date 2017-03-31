@@ -44,11 +44,40 @@ namespace WildPack
                                 break;
                         }
                         break;
+
+                    case "yaz0":
+                        switch(args[1])
+                        {
+                            case "d":
+                                if (File.Exists(args[2]))
+                                {
+                                    YAZ0.DecodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_dec" + Path.GetExtension(args[2]));
+                                }
+                                else
+                                {
+                                    Console.WriteLine("ERR: The specified input file does not exist.");
+                                }
+                                break;
+
+                            case "e":
+                                if (File.Exists(args[2]))
+                                {
+                                    YAZ0.EncodeYAZ0(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + "_enc." + Path.GetExtension(args[2]));
+                                }
+                                else
+                                {
+                                    Console.WriteLine("ERR: The specified input file does not exist.");
+                                }
+                                break;
+                        }
+                        break;
                 }
             }
             else
             {
-                Console.WriteLine("Usage: WildPack [sarc] [x|p] <input_file>");
+                Console.WriteLine("Usage:");
+                Console.WriteLine("Usage: WildPack sarc [x|p] <input_file>");
+                Console.WriteLine("Usage: WildPack yaz0 [d|e] <input_file>");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }
