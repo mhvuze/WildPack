@@ -23,6 +23,33 @@ namespace WildPack
         }
     }
 
+    struct filedata
+    {
+        public string filename, realname;
+        public int filesize, namesize, filenum;
+
+        public filedata(string _filename, string _realname, int _filesize, int _namesize, int _filenum)
+        {
+            filename = _filename;
+            realname = _realname;
+            filesize = _filesize;
+            namesize = _namesize;
+            filenum = _filenum;
+        }
+    }
+
+    struct filehash
+    {
+        public uint hash;
+        public int index;
+
+        public filehash(uint fhash, int findex)
+        {
+            hash = fhash;
+            index = findex;
+        }
+    }
+
     class SARC
     {
         // Unpack sarc
@@ -130,9 +157,127 @@ namespace WildPack
         }
 
         // Pack sarc
-        public static void PackSARC(string folder)
+        public static void PackSARC(string indir, string outfile)
         {
+            StreamWriter sw = new StreamWriter(outfile);
+            uint padding = 4;
+            uint lhash;
+            int dhi = 0;
 
+            string[] indir_files = Directory.GetFiles(indir == "" ? Environment.CurrentDirectory : indir, "*.*", SearchOption.AllDirectories);
+            filedata[] filedatalist = new filedata[indir_files.Length];
+            int lenfiles = 0, numfiles = indir_files.Length, lennames = 0;
+            uint filesize;
+
+            // Add files to array
+            for (int c = 0; c < indir_files.Length; c++)
+            {
+                string realname = indir_files[c];
+                string filenameD = indir_files[c].Replace(indir + Path.DirectorySeparatorChar.ToString(), "");
+                string filename = filenameD.Replace("\\", "/");
+
+                filesize = Utils.getfilesize(realname);
+                if (filesize % padding > 0) filesize += (padding - (filesize % padding));
+                int namesize = filename.Length;
+                namesize += (4 - (namesize % 4));
+                lennames += namesize;
+                filedatalist[c] = new filedata(filename, realname, (int)filesize, namesize, numfiles);
+            }
+
+            filehash[] hashes_unsorted = new filehash[numfiles];
+            for (int c = 0; c < numfiles; c++)
+            {
+                hashes_unsorted[c] = new filehash(Utils.calchash(filedatalist[c].filename), c);
+            }
+
+            bool[] hashes_done = new bool[hashes_unsorted.Length];
+            filehash[] hashes = new filehash[hashes_unsorted.Length];
+            for (int c = 0; c < hashes.Length; c++)
+            {
+                lhash = uint.MaxValue;
+                for (int cc = 0; cc < hashes_unsorted.Length; cc++)
+                {
+                    if (hashes_done[cc]) continue;
+                    if (hashes_unsorted[cc].hash < lhash)
+                    {
+                        dhi = cc;
+                        lhash = hashes_unsorted[cc].hash;
+                    }
+                }
+                hashes_done[dhi] = true;
+                hashes[c] = hashes_unsorted[dhi];
+            }
+
+            for (int c = 0; c < numfiles; c++)
+            {
+                lenfiles += filedatalist[hashes[c].index].filesize;
+            }
+
+            //uint lastfile = Utils.getfilesize(filedatalist[hashes[hashes.Length - 1].index].realname);
+            //lenfiles += (int)lastfile;
+            filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
+            //uint padSFAT = (padding - (filesize % padding));
+            uint padSFAT = 0;
+            uint datastart = padSFAT + filesize;
+            filesize += (uint)(padSFAT + lenfiles);
+
+            // Write SARC + SFAT header
+            sw.BaseStream.Write(new byte[] { 83, 65, 82, 67, 0x00, 0x14, 0xFE, 0xFF }, 0, 8);
+            sw.BaseStream.Write(Utils.breaku32(filesize), 0, 4);
+            sw.BaseStream.Write(Utils.breaku32(datastart), 0, 4);            
+            sw.BaseStream.Write(new byte[] { 0x01, 0x00, 0x00, 0x00, 83, 70, 65, 84, 0x00, 0x0C }, 0, 10);
+            sw.BaseStream.Write(Utils.breaku16((ushort)numfiles), 0, 2);
+            sw.BaseStream.Write(Utils.breaku32(0x65), 0, 4);
+            int strpos = 0, filepos = 0;
+
+            // Write file nodes
+            for (int c = 0; c < numfiles; c++)
+            {
+                Console.WriteLine("Packing {0}", filedatalist[c].filename);
+                sw.BaseStream.Write(Utils.breaku32(hashes[c].hash), 0, 4);
+                sw.BaseStream.WriteByte(0x01); // Unknown, see http://mk8.tockdom.com/wiki/SARC_%28File_Format%29
+                sw.BaseStream.Write(Utils.breaku32((uint)(strpos >> 2)), 1, 3);
+                strpos += filedatalist[hashes[c].index].namesize;
+                sw.BaseStream.Write(Utils.breaku32((uint)filepos), 0, 4);
+                filesize = Utils.getfilesize(filedatalist[hashes[c].index].realname);
+                sw.BaseStream.Write(Utils.breaku32((uint)filepos + (uint)filesize), 0, 4);
+                filepos += filedatalist[hashes[c].index].filesize;
+            }
+
+            sw.BaseStream.Write(new byte[] { 83, 70, 78, 84, 0x00, 0x08, 0x00, 0x00 }, 0, 8);
+
+            // Write file name table
+            for (int c = 0; c < numfiles; c++)
+            {
+                string tn = filedatalist[hashes[c].index].filename;
+                for (int cc = 0; cc < tn.Length; cc++)
+                {
+                    sw.BaseStream.WriteByte((byte)tn[cc]);
+                }
+                int numpad0 = filedatalist[hashes[c].index].namesize - filedatalist[hashes[c].index].filename.Length;
+                for (int cc = 0; cc < numpad0; cc++)
+                    sw.BaseStream.WriteByte(0);
+            }
+
+            for (int cc = 0; cc < padSFAT; cc++)
+                sw.BaseStream.WriteByte(0);
+
+            byte[] tmp;
+            for (int c = 0; c < numfiles; c++)
+            {
+                tmp = File.ReadAllBytes(filedatalist[hashes[c].index].realname);
+                sw.BaseStream.Write(tmp, 0, tmp.Length);
+                filesize = (uint)tmp.Length;
+                if (c < numfiles - 1)
+                {
+                    int numpad0 = (int)(filedatalist[hashes[c].index].filesize - filesize);
+                    for (int cc = 0; cc < numpad0; cc++)
+                        sw.BaseStream.WriteByte(0);
+                }
+            }
+
+            sw.Close();
+            sw.Dispose();
         }
     }
 }

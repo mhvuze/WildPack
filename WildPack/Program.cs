@@ -35,7 +35,7 @@ namespace WildPack
                             case "p":
                                 if (Directory.Exists(args[2]))
                                 {
-                                    SARC.PackSARC(args[2]);
+                                    SARC.PackSARC(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileName(args[2]) + "_new.sarc");
                                 }
                                 else
                                 {

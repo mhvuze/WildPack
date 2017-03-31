@@ -44,5 +44,24 @@ namespace WildPack
                     System.IO.Directory.CreateDirectory(tmp);
             }
         }
+
+        public static uint getfilesize(string fpath)
+        {
+            System.IO.StreamReader sr = new System.IO.StreamReader(fpath);
+            uint fs = (uint)sr.BaseStream.Length;
+            sr.Close();
+            sr.Dispose();
+            return fs;
+        }
+
+        public static uint calchash(string name)
+        {
+            ulong result = 0;
+            for (int c = 0; c < name.Length; c++)
+            {
+                result = (((byte)name[c]) + (result * 0x65)) & 0xFFFFFFFF;
+            }
+            return (uint)(result & 0xFFFFFFFF);
+        }
     }
 }
