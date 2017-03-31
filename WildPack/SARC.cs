@@ -216,8 +216,6 @@ namespace WildPack
                 lenfiles += filedatalist[hashes[c].index].filesize;
             }
 
-            //uint lastfile = Utils.getfilesize(filedatalist[hashes[hashes.Length - 1].index].realname);
-            //lenfiles += (int)lastfile;
             filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
             uint padSFAT = 0;
             if (sfnt_padding > 0)

@@ -30,10 +30,12 @@ namespace WildPack
             Int32 extraChunkSize = decodedBuffer.Length % 0x08;
             byte[] chunkBuffer = new byte[0x08];
 
+            Console.WriteLine("Encoding {0}", infile);
+
             using (FileStream fs = new FileStream(outfile, FileMode.Create, FileAccess.Write))
             {
                 fs.Write(Encoding.UTF8.GetBytes("Yaz0"), 0, 4);
-                fs.Write(BitConverter.GetBytes(Utils.SwapEndianness((Int32)infile.Length)), 0, 4);
+                fs.Write(BitConverter.GetBytes(Utils.SwapEndianness((Int32)new FileInfo(infile).Length)), 0, 4);
                 fs.Write(BitConverter.GetBytes(Utils.SwapEndianness(padding)), 0, 4);
                 fs.Write(BitConverter.GetBytes(Utils.SwapEndianness(0x00000000)), 0, 4);
 
