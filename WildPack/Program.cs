@@ -24,7 +24,18 @@ namespace WildPack
                             case "x":
                                 if (File.Exists(args[2]))
                                 {
-                                    SARC.UnpackSARC(args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]));
+                                    SARC.UnpackSARC(0, args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]), 0, 0);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("ERR: The specified input file does not exist.");
+                                }
+                                break;
+
+                            case "l":
+                                if (File.Exists(args[2]))
+                                {
+                                    SARC.UnpackSARC(1, args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]) + ".csv", 0, 0);
                                 }
                                 else
                                 {
@@ -42,6 +53,23 @@ namespace WildPack
                                 else
                                 {
                                     Console.WriteLine("ERR: The specified directory does not exist.");
+                                }
+                                break;
+
+                            case "s":
+                                if (args.Count() < 5)
+                                {
+                                    Console.WriteLine("ERR: Insufficient amount of arguments specified.");
+                                    break;
+                                }
+
+                                if (File.Exists(args[2]))
+                                {
+                                    SARC.UnpackSARC(2, args[2], new FileInfo(args[2]).Directory.FullName + "\\" + Path.GetFileNameWithoutExtension(args[2]), int.Parse(args[3]), int.Parse(args[4]));
+                                }
+                                else
+                                {
+                                    Console.WriteLine("ERR: The specified input file does not exist.");
                                 }
                                 break;
                         }
@@ -80,8 +108,8 @@ namespace WildPack
             else
             {
                 Console.WriteLine("Usage:");
-                Console.WriteLine("Usage: WildPack sarc [x|p] <input_file>");
-                Console.WriteLine("Usage: WildPack yaz0 [d|e] <input_file>");
+                Console.WriteLine("WildPack sarc [x|p|l|s] <input_file> (p:padding|s:file1) (s:file2)");
+                Console.WriteLine("WildPack yaz0 [d|e] <input_file> (e:padding)");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }

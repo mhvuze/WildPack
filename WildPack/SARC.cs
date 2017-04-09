@@ -50,7 +50,7 @@ namespace WildPack
     class SARC
     {
         // Unpack sarc
-        public static void UnpackSARC(string infile, string outdir)
+        public static void UnpackSARC(int mode, string infile, string outdir, int file1, int file2)
         {
             byte[] input = File.ReadAllBytes(infile);
             int pos = 4;
@@ -141,15 +141,50 @@ namespace WildPack
                 fnames[c] = tmpstr;
             }
 
-            if (!Directory.Exists(outdir)) Directory.CreateDirectory(outdir);
-            for (int c = 0; c < nodec; c++)
+            if (mode == 0)
             {
-                Console.WriteLine("Extracing {0}", fnames[c]);
-                Utils.makedirexist(Path.GetDirectoryName(outdir + "/" + fnames[c]));
-                sw = new StreamWriter(outdir + "/" + fnames[c]);
-                sw.BaseStream.Write(input, (int)(nodes[c].srt + doff), (int)(nodes[c].end - nodes[c].srt));
-                sw.Close();
-                sw.Dispose();
+                if (!Directory.Exists(outdir)) Directory.CreateDirectory(outdir);
+                for (int c = 0; c < nodec; c++)
+                {
+                    Console.WriteLine("Extracing {0}", fnames[c]);
+                    Utils.makedirexist(Path.GetDirectoryName(outdir + "/" + fnames[c]));
+                    sw = new StreamWriter(outdir + "/" + fnames[c]);
+                    sw.BaseStream.Write(input, (int)(nodes[c].srt + doff), (int)(nodes[c].end - nodes[c].srt));
+                    sw.Close();
+                    sw.Dispose();
+                }
+            }
+            else if (mode == 1)
+            {
+                StreamWriter csv = new StreamWriter(infile + ".csv", false);
+                csv.WriteLine("#,File,Type,Size,NameHash,Flag,NameTableEntry,DataNodeStart,DataNodeEnd");
+                for (int c = 0; c < nodec; c++)
+                {
+                    Console.WriteLine("Processing {0}", fnames[c]);
+                    csv.WriteLine(c + "," +
+                        fnames[c] + "," +
+                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "," +
+                        (nodes[c].end - nodes[c].srt) + "," +
+                        nodes[c].hash.ToString("X4") + "," +
+                        nodes[c].unk.ToString("X1") + "," +
+                        nodes[c].off.ToString("X3") + "," +
+                        nodes[c].srt.ToString("X4") + "," +
+                        nodes[c].end.ToString("X4"));
+                }
+                csv.Close();
+                csv.Dispose();
+            }
+            else if (mode == 2)
+            {
+                Console.WriteLine("Swapping data info for file {0} with file {1}.", file1, file2);
+                StreamWriter swp = new StreamWriter(infile + "_switched.sarc");
+                swp.BaseStream.Write(input, 0, input.Length);
+                swp.BaseStream.Seek(32 + (16 * file1) + 8, SeekOrigin.Begin);
+                swp.BaseStream.Write(Utils.breaku32(nodes[file2].srt), 0, 4);
+                swp.BaseStream.Write(Utils.breaku32(nodes[file2].end), 0, 4);
+                swp.BaseStream.Seek(32 + (16 * file2) + 8, SeekOrigin.Begin);
+                swp.BaseStream.Write(Utils.breaku32(nodes[file1].srt), 0, 4);
+                swp.BaseStream.Write(Utils.breaku32(nodes[file1].end), 0, 4);
             }
         }
 
@@ -219,9 +254,10 @@ namespace WildPack
             filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
             uint padSFAT = 0;
             if (sfnt_padding > 0)
-                padSFAT = (sfnt_padding - (filesize % sfnt_padding));          
+                padSFAT = (sfnt_padding - (filesize % sfnt_padding));
             uint datastart = padSFAT + filesize;
             filesize += (uint)(padSFAT + lenfiles);
+            uint org_fs = filesize;
 
             // Write SARC + SFAT header
             sw.BaseStream.Write(new byte[] { 83, 65, 82, 67, 0x00, 0x14, 0xFE, 0xFF }, 0, 8);
@@ -264,12 +300,63 @@ namespace WildPack
             for (int cc = 0; cc < padSFAT; cc++)
                 sw.BaseStream.WriteByte(0);
 
+            var fs = new FileStream(outfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            StreamReader sr = new StreamReader(fs);
             byte[] tmp;
+            byte[] size_tmp = new byte[4];
+            byte[] end_tmp = new byte[4];
+            bool first_bflim = false;
+            uint bflim_padding = 0;
+            long last_offset = 0;
             for (int c = 0; c < numfiles; c++)
             {
                 tmp = File.ReadAllBytes(filedatalist[hashes[c].index].realname);
-                sw.BaseStream.Write(tmp, 0, tmp.Length);
-                filesize = (uint)tmp.Length;
+
+                // Account for bflim files
+                if (filedatalist[hashes[c].index].filename.Contains(".bflim")  && c != numfiles - 1 && first_bflim == false)
+                {
+                    first_bflim = true;
+                    byte[] tmp2 = new byte[tmp.Length + (sfnt_padding - (tmp.Length % sfnt_padding)) + 0x94];
+                    Array.Copy(tmp, 0, tmp2, 0x94, tmp.Length);
+                    sw.BaseStream.Write(tmp2, 0, tmp2.Length);
+                    filesize = (uint)tmp2.Length;
+
+                    bflim_padding += filesize - (uint)tmp.Length;
+                    last_offset = sw.BaseStream.Position;
+                    sr.BaseStream.Seek(0x20 + ((c-1) * 0x10) + 0x08, SeekOrigin.Begin);
+                    int size = sr.BaseStream.Read(size_tmp, 0, 4);
+                    int end = sr.BaseStream.Read(end_tmp, 0, 4);
+
+                    sw.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
+                    sw.BaseStream.Write(Utils.breaku32((uint)size + bflim_padding), 0, 4);
+                    sw.BaseStream.Write(Utils.breaku32((uint)end + bflim_padding), 0, 4);
+                    sw.BaseStream.Seek(last_offset, SeekOrigin.Begin);
+                }
+                else if (filedatalist[hashes[c].index].filename.Contains(".bflim") && c != numfiles - 1 && first_bflim == true)
+                {
+                    byte[] tmp2 = new byte[tmp.Length + (sfnt_padding - (tmp.Length % sfnt_padding))];
+                    Array.Copy(tmp, tmp2, tmp.Length);
+                    sw.BaseStream.Write(tmp2, 0, tmp2.Length);
+                    filesize = (uint)tmp2.Length;
+
+                    bflim_padding += filesize - (uint)tmp.Length;
+                    last_offset = sw.BaseStream.Position;
+                    sr.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
+                    int size = sr.BaseStream.Read(size_tmp, 0, 4);
+                    int end = sr.BaseStream.Read(end_tmp, 0, 4);
+
+                    sw.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
+                    sw.BaseStream.Write(Utils.breaku32((uint)size + bflim_padding), 0, 4);
+                    sw.BaseStream.Write(Utils.breaku32((uint)end + bflim_padding), 0, 4);
+                    sw.BaseStream.Seek(last_offset, SeekOrigin.Begin);
+                }
+                else
+                {
+                    sw.BaseStream.Write(tmp, 0, tmp.Length);
+                    filesize = (uint)tmp.Length;
+                }
+
+
                 if (c < numfiles - 1)
                 {
                     int numpad0 = (int)(filedatalist[hashes[c].index].filesize - filesize);
@@ -278,8 +365,14 @@ namespace WildPack
                 }
             }
 
+            // Fix SARC header file size
+            sw.BaseStream.Seek(0x08, SeekOrigin.Begin);
+            sw.BaseStream.Write(Utils.breaku32(org_fs + bflim_padding), 0, 4);
+
             sw.Close();
             sw.Dispose();
+            sr.Close();
+            sr.Dispose();
         }
     }
 }
