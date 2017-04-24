@@ -23,13 +23,14 @@ namespace WildPack
     struct filedata
     {
         public string filename, realname;
-        public int filesize, namesize, filenum;
+        public int filesize, filesize_padded, namesize, filenum;
 
-        public filedata(string _filename, string _realname, int _filesize, int _namesize, int _filenum)
+        public filedata(string _filename, string _realname, int _filesize, int _filesize_padded, int _namesize, int _filenum)
         {
             filename = _filename;
             realname = _realname;
             filesize = _filesize;
+            filesize_padded = _filesize_padded;
             namesize = _namesize;
             filenum = _filenum;
         }
@@ -151,28 +152,46 @@ namespace WildPack
                     sw = new StreamWriter(outdir + "/" + fnames[c]);
                     sw.BaseStream.Write(input, (int)(nodes[c].srt + doff), (int)(nodes[c].end - nodes[c].srt));
                     sw.Close();
-                    sw.Dispose();
                 }
             }
             else if (mode == 1)
             {
                 StreamWriter csv = new StreamWriter(infile + ".csv", false);
-                csv.WriteLine("#,File,Type,Size,NameHash,Flag,NameTableEntry,DataNodeStart,DataNodeEnd");
+                csv.WriteLine("#,File,Type,Size,NameHash,Flag,NameTableEntry,DataNodeStart,DataNodeEnd,Padding,PaddedSize");
                 for (int c = 0; c < nodec; c++)
                 {
                     Console.WriteLine("Processing {0}", fnames[c]);
-                    csv.WriteLine(c + "," +
+                    if (c == nodec - 1)
+                    {
+                        csv.WriteLine(c + "," +
                         fnames[c] + "," +
                         fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "," +
                         (nodes[c].end - nodes[c].srt) + "," +
-                        nodes[c].hash.ToString("X4") + "," +
+                        nodes[c].hash.ToString("X8") + "," +
                         nodes[c].unk.ToString("X1") + "," +
                         nodes[c].off.ToString("X3") + "," +
-                        nodes[c].srt.ToString("X4") + "," +
-                        nodes[c].end.ToString("X4"));
+                        nodes[c].srt.ToString("X8") + "," +
+                        nodes[c].end.ToString("X8") + ",0," +
+                        (nodes[c].end - nodes[c].srt).ToString("X8")
+                        );
+                    }
+                    else
+                    {
+                        csv.WriteLine(c + "," +
+                        fnames[c] + "," +
+                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "," +
+                        (nodes[c].end - nodes[c].srt) + "," +
+                        nodes[c].hash.ToString("X8") + "," +
+                        nodes[c].unk.ToString("X1") + "," +
+                        nodes[c].off.ToString("X3") + "," +
+                        nodes[c].srt.ToString("X8") + "," +
+                        nodes[c].end.ToString("X8") + "," +
+                        (nodes[c + 1].srt - nodes[c].end).ToString("X8") + "," +
+                        ((nodes[c].end - nodes[c].srt) + (nodes[c + 1].srt - nodes[c].end)).ToString("X8")
+                        );
+                    }
                 }
                 csv.Close();
-                csv.Dispose();
             }
             else if (mode == 2)
             {
@@ -185,6 +204,7 @@ namespace WildPack
                 swp.BaseStream.Seek(32 + (16 * file2) + 8, SeekOrigin.Begin);
                 swp.BaseStream.Write(Utils.breaku32(nodes[file1].srt), 0, 4);
                 swp.BaseStream.Write(Utils.breaku32(nodes[file1].end), 0, 4);
+                swp.Close();
             }
         }
 
@@ -192,7 +212,7 @@ namespace WildPack
         public static void PackSARC(string indir, string outfile, uint sfnt_padding)
         {
             StreamWriter sw = new StreamWriter(outfile);
-            uint padding = 4;
+            uint padding = 0;
             uint lhash;
             int dhi = 0;
 
@@ -200,6 +220,7 @@ namespace WildPack
             filedata[] filedatalist = new filedata[indir_files.Length];
             int lenfiles = 0, numfiles = indir_files.Length, lennames = 0;
             uint filesize;
+            uint filesize_padded = 0;
 
             // Add files to array
             for (int c = 0; c < indir_files.Length; c++)
@@ -215,11 +236,26 @@ namespace WildPack
                 }
 
                 filesize = Utils.getfilesize(realname);
-                if (filesize % padding > 0) filesize += (padding - (filesize % padding));
+                if (filename.Contains(".bffnt"))
+                {
+                    padding = 0x2000;
+                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                }
+                else if (filename.Contains(".bflim"))
+                {
+                    padding = 0x80;
+                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                }
+                else
+                {
+                    padding = 0x4;
+                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                }
+                
                 int namesize = filename.Length;
                 namesize += (4 - (namesize % 4));
                 lennames += namesize;
-                filedatalist[c] = new filedata(filename, realname, (int)filesize, namesize, numfiles);
+                filedatalist[c] = new filedata(filename, realname, (int)filesize, (int)filesize_padded, namesize, numfiles);
             }
 
             filehash[] hashes_unsorted = new filehash[numfiles];
@@ -246,22 +282,22 @@ namespace WildPack
                 hashes[c] = hashes_unsorted[dhi];
             }
 
-            for (int c = 0; c < numfiles; c++)
+            /*for (int c = 0; c < numfiles; c++)
             {
-                lenfiles += filedatalist[hashes[c].index].filesize;
-            }
+                lenfiles += filedatalist[hashes[c].index].filesize_padded;
+            }*/
 
-            filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
+            uint sarc_filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
             uint padSFAT = 0;
             if (sfnt_padding > 0)
-                padSFAT = (sfnt_padding - (filesize % sfnt_padding));
-            uint datastart = padSFAT + filesize;
-            filesize += (uint)(padSFAT + lenfiles);
-            uint org_fs = filesize;
+                padSFAT = (sfnt_padding - (sarc_filesize % sfnt_padding));
+            uint datastart = padSFAT + sarc_filesize;
+            /*filesize += (uint)(padSFAT + lenfiles);
+            uint org_fs = filesize;*/
 
             // Write SARC + SFAT header
             sw.BaseStream.Write(new byte[] { 83, 65, 82, 67, 0x00, 0x14, 0xFE, 0xFF }, 0, 8);
-            sw.BaseStream.Write(Utils.breaku32(filesize), 0, 4);
+            sw.BaseStream.Write(Utils.breaku32(sarc_filesize), 0, 4);
             sw.BaseStream.Write(Utils.breaku32(datastart), 0, 4);            
             sw.BaseStream.Write(new byte[] { 0x01, 0x00, 0x00, 0x00, 83, 70, 65, 84, 0x00, 0x0C }, 0, 10);
             sw.BaseStream.Write(Utils.breaku16((ushort)numfiles), 0, 2);
@@ -277,9 +313,25 @@ namespace WildPack
                 sw.BaseStream.Write(Utils.breaku32((uint)(strpos >> 2)), 1, 3);
                 strpos += filedatalist[hashes[c].index].namesize;
                 sw.BaseStream.Write(Utils.breaku32((uint)filepos), 0, 4);
-                filesize = Utils.getfilesize(filedatalist[hashes[c].index].realname);
-                sw.BaseStream.Write(Utils.breaku32((uint)filepos + (uint)filesize), 0, 4);
-                filepos += filedatalist[hashes[c].index].filesize;
+                if (c + 1 != numfiles)
+                {
+                    filesize_padded = (uint)filedatalist[hashes[c].index].filesize_padded;
+                    filesize = Utils.getfilesize(filedatalist[hashes[c].index].realname);
+                    sw.BaseStream.Write(Utils.breaku32((uint)filepos + (uint)filesize), 0, 4);
+                    filepos += filedatalist[hashes[c].index].filesize_padded;
+
+                    // Add to sarc filesize header info
+                    lenfiles += filedatalist[hashes[c].index].filesize_padded;
+                }
+                else
+                {
+                    filesize = Utils.getfilesize(filedatalist[hashes[c].index].realname);
+                    sw.BaseStream.Write(Utils.breaku32((uint)filepos + (uint)filesize), 0, 4);
+                    filepos += filedatalist[hashes[c].index].filesize;
+
+                    // Add to sarc filesize header info
+                    lenfiles += filedatalist[hashes[c].index].filesize;
+                }
             }
 
             sw.BaseStream.Write(new byte[] { 83, 70, 78, 84, 0x00, 0x08, 0x00, 0x00 }, 0, 8);
@@ -305,74 +357,27 @@ namespace WildPack
             byte[] tmp;
             byte[] size_tmp = new byte[4];
             byte[] end_tmp = new byte[4];
-            bool first_bflim = false;
-            uint bflim_padding = 0;
-            long last_offset = 0;
             for (int c = 0; c < numfiles; c++)
             {
                 tmp = File.ReadAllBytes(filedatalist[hashes[c].index].realname);
-
-                // Account for bflim files
-                if (filedatalist[hashes[c].index].filename.Contains(".bflim")  && c != numfiles - 1 && first_bflim == false)
-                {
-                    first_bflim = true;
-                    byte[] tmp2 = new byte[tmp.Length + (sfnt_padding - (tmp.Length % sfnt_padding)) + 0x94];
-                    Array.Copy(tmp, 0, tmp2, 0x94, tmp.Length);
-                    sw.BaseStream.Write(tmp2, 0, tmp2.Length);
-                    filesize = (uint)tmp2.Length;
-
-                    bflim_padding += filesize - (uint)tmp.Length;
-                    last_offset = sw.BaseStream.Position;
-                    sr.BaseStream.Seek(0x20 + ((c-1) * 0x10) + 0x08, SeekOrigin.Begin);
-                    int size = sr.BaseStream.Read(size_tmp, 0, 4);
-                    int end = sr.BaseStream.Read(end_tmp, 0, 4);
-
-                    sw.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
-                    sw.BaseStream.Write(Utils.breaku32((uint)size + bflim_padding), 0, 4);
-                    sw.BaseStream.Write(Utils.breaku32((uint)end + bflim_padding), 0, 4);
-                    sw.BaseStream.Seek(last_offset, SeekOrigin.Begin);
-                }
-                else if (filedatalist[hashes[c].index].filename.Contains(".bflim") && c != numfiles - 1 && first_bflim == true)
-                {
-                    byte[] tmp2 = new byte[tmp.Length + (sfnt_padding - (tmp.Length % sfnt_padding))];
-                    Array.Copy(tmp, tmp2, tmp.Length);
-                    sw.BaseStream.Write(tmp2, 0, tmp2.Length);
-                    filesize = (uint)tmp2.Length;
-
-                    bflim_padding += filesize - (uint)tmp.Length;
-                    last_offset = sw.BaseStream.Position;
-                    sr.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
-                    int size = sr.BaseStream.Read(size_tmp, 0, 4);
-                    int end = sr.BaseStream.Read(end_tmp, 0, 4);
-
-                    sw.BaseStream.Seek(0x20 + ((c - 1) * 0x10) + 0x08, SeekOrigin.Begin);
-                    sw.BaseStream.Write(Utils.breaku32((uint)size + bflim_padding), 0, 4);
-                    sw.BaseStream.Write(Utils.breaku32((uint)end + bflim_padding), 0, 4);
-                    sw.BaseStream.Seek(last_offset, SeekOrigin.Begin);
-                }
-                else
-                {
-                    sw.BaseStream.Write(tmp, 0, tmp.Length);
-                    filesize = (uint)tmp.Length;
-                }
-
+                sw.BaseStream.Write(tmp, 0, tmp.Length);
+                filesize = (uint)tmp.Length;
 
                 if (c < numfiles - 1)
                 {
-                    int numpad0 = (int)(filedatalist[hashes[c].index].filesize - filesize);
+                    int numpad0 = (int)(filedatalist[hashes[c].index].filesize_padded - filesize);
                     for (int cc = 0; cc < numpad0; cc++)
                         sw.BaseStream.WriteByte(0);
                 }
             }
 
             // Fix SARC header file size
+            sarc_filesize += (uint)(padSFAT + lenfiles);
             sw.BaseStream.Seek(0x08, SeekOrigin.Begin);
-            sw.BaseStream.Write(Utils.breaku32(org_fs + bflim_padding), 0, 4);
+            sw.BaseStream.Write(Utils.breaku32(sarc_filesize), 0, 4); // add padding here
 
             sw.Close();
-            sw.Dispose();
             sr.Close();
-            sr.Dispose();
         }
     }
 }

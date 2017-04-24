@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WildPack
 {
@@ -50,7 +46,6 @@ namespace WildPack
             System.IO.StreamReader sr = new System.IO.StreamReader(fpath);
             uint fs = (uint)sr.BaseStream.Length;
             sr.Close();
-            sr.Dispose();
             return fs;
         }
 
