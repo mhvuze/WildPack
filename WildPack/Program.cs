@@ -100,6 +100,22 @@ namespace WildPack
                                 break;
                         }
                         break;
+
+                    case "yaml":
+                        switch(args[1])
+                        {
+                            case "c":
+                                if (File.Exists(args[2]))
+                                {
+                                    YAML.Convert(args[2]);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("ERR: The specified input file does not exist.");
+                                }
+                                break;
+                        }
+                        break;
                 }
             }
             else
@@ -107,6 +123,7 @@ namespace WildPack
                 Console.WriteLine("Usage:");
                 Console.WriteLine("WildPack sarc [x|p|l|s] <input_file> (p:padding|s:file1) (s:file2)");
                 Console.WriteLine("WildPack yaz0 [d|e] <input_file> (e:padding)");
+                Console.WriteLine("WildPack yaml c <input_file>");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }

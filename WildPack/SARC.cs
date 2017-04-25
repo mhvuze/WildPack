@@ -157,36 +157,36 @@ namespace WildPack
             else if (mode == 1)
             {
                 StreamWriter csv = new StreamWriter(infile + ".csv", false);
-                csv.WriteLine("#,File,Type,Size,NameHash,Flag,NameTableEntry,DataNodeStart,DataNodeEnd,Padding,PaddedSize");
+                csv.WriteLine("#\tFile\tType\tSize\tNameHash\tFlag\tNameTableEntry\tDataNodeStart\tDataNodeEnd\tPadding\tPaddedSize");
                 for (int c = 0; c < nodec; c++)
                 {
                     Console.WriteLine("Processing {0}", fnames[c]);
                     if (c == nodec - 1)
                     {
-                        csv.WriteLine(c + "," +
-                        fnames[c] + "," +
-                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "," +
-                        (nodes[c].end - nodes[c].srt) + "," +
-                        nodes[c].hash.ToString("X8") + "," +
-                        nodes[c].unk.ToString("X1") + "," +
-                        nodes[c].off.ToString("X3") + "," +
-                        nodes[c].srt.ToString("X8") + "," +
-                        nodes[c].end.ToString("X8") + ",0," +
+                        csv.WriteLine(c + "\t" +
+                        fnames[c] + "\t" +
+                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "\t" +
+                        (nodes[c].end - nodes[c].srt) + "\t" +
+                        nodes[c].hash.ToString("X8") + "\t" +
+                        nodes[c].unk.ToString("X1") + "\t" +
+                        nodes[c].off.ToString("X3") + "\t" +
+                        nodes[c].srt.ToString("X8") + "\t" +
+                        nodes[c].end.ToString("X8") + "\t0\t" +
                         (nodes[c].end - nodes[c].srt).ToString("X8")
                         );
                     }
                     else
                     {
-                        csv.WriteLine(c + "," +
-                        fnames[c] + "," +
-                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "," +
-                        (nodes[c].end - nodes[c].srt) + "," +
-                        nodes[c].hash.ToString("X8") + "," +
-                        nodes[c].unk.ToString("X1") + "," +
-                        nodes[c].off.ToString("X3") + "," +
-                        nodes[c].srt.ToString("X8") + "," +
-                        nodes[c].end.ToString("X8") + "," +
-                        (nodes[c + 1].srt - nodes[c].end).ToString("X8") + "," +
+                        csv.WriteLine(c + "\t" +
+                        fnames[c] + "\t" +
+                        fnames[c].Substring(fnames[c].LastIndexOf(".") + 1) + "\t" +
+                        (nodes[c].end - nodes[c].srt) + "\t" +
+                        nodes[c].hash.ToString("X8") + "\t" +
+                        nodes[c].unk.ToString("X1") + "\t" +
+                        nodes[c].off.ToString("X3") + "\t" +
+                        nodes[c].srt.ToString("X8") + "\t" +
+                        nodes[c].end.ToString("X8") + "\t" +
+                        (nodes[c + 1].srt - nodes[c].end).ToString("X8") + "\t" +
                         ((nodes[c].end - nodes[c].srt) + (nodes[c + 1].srt - nodes[c].end)).ToString("X8")
                         );
                     }
@@ -239,17 +239,20 @@ namespace WildPack
                 if (filename.Contains(".bffnt"))
                 {
                     padding = 0x2000;
-                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    if (0 < ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    else { filesize_padded = filesize; }
                 }
                 else if (filename.Contains(".bflim"))
                 {
                     padding = 0x80;
-                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    if (0 < ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    else { filesize_padded = filesize; }
                 }
                 else
                 {
                     padding = 0x4;
-                    if (padding != ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    if (0 < ((uint)filesize % (uint)padding)) { filesize_padded = filesize + (padding - ((uint)filesize % (uint)padding)); }
+                    else { filesize_padded = filesize; }
                 }
                 
                 int namesize = filename.Length;
@@ -282,18 +285,11 @@ namespace WildPack
                 hashes[c] = hashes_unsorted[dhi];
             }
 
-            /*for (int c = 0; c < numfiles; c++)
-            {
-                lenfiles += filedatalist[hashes[c].index].filesize_padded;
-            }*/
-
             uint sarc_filesize = (uint)(32 + (16 * numfiles) + 8 + lennames); // SARC header + SFAT header + (SFAT nodes) + SFNT header + file names
             uint padSFAT = 0;
             if (sfnt_padding > 0)
                 padSFAT = (sfnt_padding - (sarc_filesize % sfnt_padding));
             uint datastart = padSFAT + sarc_filesize;
-            /*filesize += (uint)(padSFAT + lenfiles);
-            uint org_fs = filesize;*/
 
             // Write SARC + SFAT header
             sw.BaseStream.Write(new byte[] { 83, 65, 82, 67, 0x00, 0x14, 0xFE, 0xFF }, 0, 8);

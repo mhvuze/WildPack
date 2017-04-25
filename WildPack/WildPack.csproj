@@ -53,8 +53,11 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reader\EndianBigReader.cs" />
+    <Compile Include="Reader\EndianBigWriter.cs" />
     <Compile Include="SARC.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="YAML.cs" />
     <Compile Include="YAZ0.cs" />
   </ItemGroup>
   <ItemGroup>
