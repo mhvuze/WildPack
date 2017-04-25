@@ -10,17 +10,17 @@ Pay attention to padding. For whatever reason, some SARC files do not use any pa
 ## Modes
 SARC:
 
-* x: Extract provided file in arg2.
-* p: Pack provided folder in arg2 to SARC. Respect hex padding provided in arg4.
+* x: Extract file provided in arg2.
+* p: Pack folder provided in arg2 to SARC. Respect hex padding provided in arg4.
 * l: Create a csv about all files in the provided SARC in arg2.
 * s: Swap data file offsets in the file provided in arg2. You need to specify the desired swaps in arg4 and arg5.
 
 YAZ0:
-* d: Decode provided file in arg2.
-* e: Encode provided file in arg2. Respect hex padding provided in arg4.
+* d: Decode file provided in arg2.
+* e: Encode file provided in arg2. Respect hex padding provided in arg4.
 
 YAML:
-* c: Convert file provided in arg1 to arg2.
+* c: Convert file provided in arg2.
 
 Based on code from [here](https://github.com/Chadderz121/yamlconv), [here](https://github.com/smb123w64gb/Uwizard/tree/master/Uwizard) and [here](https://forum.xentax.com/viewtopic.php?p=128897&sid=ea591bce89cb53612db8df78dbd08a8a#p128897).
 
