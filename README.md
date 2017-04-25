@@ -1,7 +1,7 @@
 # WildPack
 Experimental tools for BOTW unpacking and repacking.
 
-There is currently a bug affecting SARC repacking that crushes BFLIM textures. The SARC files will still work but the textures appear broken. YAZ0 currently uses a fake "compression", files will be huge in comparison to the original but should also be fully functional.
+There is currently a bug affecting SARC repacking which contain BFLIM textures. The SARC files should still work but the textures appear broken. YAZ0 currently uses a fake "compression", files will be huge in comparison to the original but are fully functional.
 
 I only toyed around with Common.pack and some stuff in there so far, don't expect anything to work.
 
@@ -19,4 +19,11 @@ YAZ0:
 * d: Decode provided file in arg2.
 * e: Encode provided file in arg2. Respect hex padding provided in arg4.
 
-Based on code from [here](https://github.com/smb123w64gb/Uwizard/tree/master/Uwizard) and [here](https://forum.xentax.com/viewtopic.php?p=128897&sid=ea591bce89cb53612db8df78dbd08a8a#p128897).
+YAML:
+* c: Convert file provided in arg1 to arg2.
+
+Based on code from [here](https://github.com/Chadderz121/yamlconv), [here](https://github.com/smb123w64gb/Uwizard/tree/master/Uwizard) and [here](https://forum.xentax.com/viewtopic.php?p=128897&sid=ea591bce89cb53612db8df78dbd08a8a#p128897).
+
+## Personal todo
+* Port everything to BE binary reader to clean up source
+* Fix repacking of bflim (and potentially other file types that use customized padding)
